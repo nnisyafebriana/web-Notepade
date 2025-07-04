@@ -1,0 +1,2997 @@
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notepad</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {},
+      },
+      variants: {},
+      plugins: [],
+    }
+  </script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid #d1d5db; /* gray-300 */
+      padding: 0 1rem;
+      background-color: #f9fafb; /* gray-50 */
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+    .tabs::-webkit-scrollbar {
+      height: 6px;
+    }
+    .tabs::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1; /* gray-300 */
+      border-radius: 3px;
+    }
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 0.375rem 0.375rem 0 0;
+      cursor: pointer;
+      user-select: none;
+      background-color: transparent;
+      font-weight: 500;
+      color: #374151; /* gray-700 */
+      white-space: nowrap;
+      font-size: 0.85rem;
+      transition: background-color 0.2s;
+    }
+    .tab:hover {
+      background-color: #e5e7eb; /* gray-200 */
+    }
+    .tab.active {
+      background-color: #bfdbfe; /* blue-200 */
+      font-weight: 700;
+      color: #1e40af; /* blue-800 */
+      border-bottom: 2px solid #3b82f6; /* blue-500 */
+    }
+    .tab .close-btn {
+      font-size: 1rem;
+      color: #6b7280; /* gray-500 */
+      cursor: pointer;
+      padding: 0 0.15rem;
+      line-height: 1;
+      user-select: none;
+      transition: color 0.2s;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 9999px;
+      background-color: transparent;
+    }
+    .tab .close-btn:hover {
+      color: #ef4444; /* red-500 */
+      background-color: #fee2e2; /* red-100 */
+    }
+    .tab .close-btn::before {
+      content: "×";
+      display: block;
+      line-height: 1;
+      font-weight: 700;
+      font-size: 1rem;
+      user-select: none;
+    }
+    .tab .file-name {
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+    }
+    .editor-container {
+      padding: 1rem;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    textarea#textEditor {
+      width: 100%;
+      height: calc(100vh - 144px - 48px); /* 144px header+footer+toolbar + 48px tabs approx */
+      resize: none;
+      border: 1px solid #d1d5db; /* gray-300 */
+      border-radius: 0.375rem;
+      padding: 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 400;
+      color: #111827; /* gray-900 */
+      font-family: 'Inter', sans-serif, monospace;
+      outline-offset: 2px;
+      outline-color: #3b82f6; /* blue-500 */
+      transition: outline-color 0.2s, background-color 0.3s, color 0.3s, border-color 0.3s;
+      background-color: white;
+      white-space: pre-wrap;
+      list-style-position: inside;
+    }
+    textarea#textEditor:focus {
+      outline: 2px solid #3b82f6;
+    }
+    /* Scrollbar for textarea */
+    textarea#textEditor::-webkit-scrollbar {
+      width: 8px;
+    }
+    textarea#textEditor::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1; /* gray-300 */
+      border-radius: 4px;
+    }
+    /* Responsive adjustments */
+    @media (max-width: 640px) {
+      .tabs {
+        padding: 0 0.5rem;
+      }
+      .tab .file-name {
+        max-width: 90px;
+        font-size: 0.75rem;
+      }
+      textarea#textEditor {
+        height: calc(100vh - 120px - 48px);
+      }
+    }
+
+    /* Open File Modal Styles */
+    #openFileModal {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.3);
+      display: none;
+      z-index: 60;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #openFileModal.active {
+      display: flex;
+    }
+    #openFileModal > .modal-content {
+      background: white;
+      border-radius: 0.5rem;
+      width: 100%;
+      max-width: 900px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      color: #374151;
+      background-color: #f9fafb;
+    }
+    #openFileModal > .modal-content > header {
+      background-color: #2563eb; /* blue-600 */
+      color: white;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      font-size: 1.125rem;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    #openFileModal > .modal-content > main {
+      display: flex;
+      flex-grow: 1;
+      overflow: hidden;
+      background: #f9fafb;
+    }
+    /* Sidebar */
+    #openFileModal .sidebar {
+      width: 180px;
+      background: white;
+      border-right: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem 0;
+      user-select: none;
+    }
+    #openFileModal .sidebar button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: #374151;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      text-align: left;
+      width: 100%;
+    }
+    #openFileModal .sidebar button:hover,
+    #openFileModal .sidebar button.active {
+      background-color: #bfdbfe;
+      color: #1e40af;
+      font-weight: 700;
+    }
+    #openFileModal .sidebar button i {
+      min-width: 18px;
+      text-align: center;
+      color: #2563eb;
+    }
+    /* File list container */
+    #openFileModal .file-list-container {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+    }
+    /* Tabs for file list */
+    #openFileModal .file-list-tabs {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+      user-select: none;
+    }
+    #openFileModal .file-list-tabs button {
+      flex: 1;
+      padding: 0.5rem 0;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #6b7280;
+      transition: color 0.2s, border-bottom-color 0.2s;
+      border-bottom: 3px solid transparent;
+    }
+    #openFileModal .file-list-tabs button.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+    }
+    /* File list */
+    #openFileModal .file-list {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 0.5rem 1rem;
+      list-style: none;
+      margin: 0;
+      color: #374151;
+      background-color: white;
+    }
+    #openFileModal .file-list-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      font-size: 0.9rem;
+      color: #374151;
+      user-select: none;
+    }
+    #openFileModal .file-list-item:hover {
+      background-color: #e0e7ff;
+    }
+    #openFileModal .file-list-item.selected {
+      background-color: #2563eb;
+      color: white;
+      font-weight: 600;
+    }
+    #openFileModal .file-list-item.selected i.file-icon {
+      color: white !important;
+    }
+    #openFileModal .file-list-item i.file-icon {
+      min-width: 20px;
+      text-align: center;
+      color: #2563eb;
+      flex-shrink: 0;
+    }
+    #openFileModal .file-list-item .file-name {
+      flex-grow: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    #openFileModal .file-list-item .file-location {
+      flex-shrink: 0;
+      color: #6b7280;
+      font-size: 0.8rem;
+      min-width: 120px;
+      text-align: right;
+      user-select: text;
+    }
+    #openFileModal .file-list-item .file-date {
+      flex-shrink: 0;
+      color: #6b7280;
+      font-size: 0.8rem;
+      min-width: 100px;
+      text-align: right;
+      user-select: text;
+    }
+    /* Star icon */
+    #openFileModal .file-list-item .star-icon {
+      cursor: pointer;
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      color: #d1d5db;
+      transition: color 0.2s;
+      user-select: none;
+      width: 20px;
+      text-align: center;
+      line-height: 1;
+      font-family: monospace;
+      font-weight: 700;
+    }
+    #openFileModal .file-list-item .star-icon.favorited {
+      color: #fbbf24; /* amber-400 */
+    }
+    #openFileModal .file-list-item .star-icon:hover {
+      color: #f59e0b; /* amber-500 */
+    }
+    #openFileModal .file-list-item.selected .star-icon {
+      color: #fde68a; /* lighter amber for selected */
+    }
+    /* Bottom bar */
+    #openFileModal > .modal-content > footer {
+      background: #f3f4f6;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+      color: #374151;
+      user-select: none;
+    }
+    #openFileModal > .modal-content > footer .status {
+      font-style: italic;
+      color: #6b7280;
+      flex-grow: 1;
+    }
+    #openFileModal > .modal-content > footer .buttons {
+      display: flex;
+      gap: 0.75rem;
+    }
+    #openFileModal > .modal-content > footer button {
+      padding: 0.4rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.2s;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    #openFileModal > .modal-content > footer button.cancel-btn {
+      background-color: #e5e7eb;
+      color: #374151;
+    }
+    #openFileModal > .modal-content > footer button.cancel-btn:hover {
+      background-color: #d1d5db;
+    }
+    #openFileModal > .modal-content > footer button.open-btn {
+      background-color: #2563eb;
+      color: white;
+    }
+    #openFileModal > .modal-content > footer button.open-btn:disabled {
+      background-color: #93c5fd;
+      cursor: not-allowed;
+    }
+    #openFileModal > .modal-content > footer button.open-btn:hover:not(:disabled) {
+      background-color: #1e40af;
+    }
+
+    /* Save Modal Styles */
+    #saveFileModal {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.3);
+      display: none;
+      z-index: 70;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #saveFileModal.active {
+      display: flex;
+    }
+    #saveFileModal > .modal-content {
+      background: white;
+      border-radius: 0.5rem;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      color: #374151;
+      background-color: #f9fafb;
+    }
+    #saveFileModal > .modal-content > header {
+      background-color: #2563eb; 
+      color: white;
+      padding: 1rem 1.5rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      user-select: none;
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    #saveFileModal > .modal-content > header button.close-save-modal {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      user-select: none;
+      transition: color 0.2s;
+    }
+    #saveFileModal > .modal-content > header button.close-save-modal:hover {
+      color: #93c5fd; 
+    }
+    #saveFileModal > .modal-content > main {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    #saveFileModal label {
+      font-weight: 600;
+      color: #374151;
+      display: block;
+      margin-bottom: 0.25rem;
+      user-select: none;
+    }
+    #saveFileModal input[type="text"] {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 1rem;
+      color: #111827;
+      outline-offset: 2px;
+      outline-color: transparent;
+      transition: outline-color 0.2s;
+      background-color: white;
+    }
+    #saveFileModal input[type="text"]:focus {
+      outline-color: #2563eb;
+    }
+    #saveFileModal .storage-options {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    #saveFileModal .storage-option {
+      flex: 1 1 45%;
+      border: 2px solid #d1d5db;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: border-color 0.3s, background-color 0.3s;
+      background-color: white;
+      color: #374151;
+    }
+    #saveFileModal .storage-option.selected {
+      border-color: #2563eb;
+      background-color: #93c5fd; /* green-100 */
+    }
+    #saveFileModal .storage-option i {
+      font-size: 1.5rem;
+      color: #2563eb;
+      flex-shrink: 0;
+      width: 24px;
+      text-align: center;
+    }
+    #saveFileModal .storage-option .storage-info {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+    #saveFileModal .storage-option .storage-name {
+      font-weight: 600;
+      color: #03297c; /* green-800 */
+    }
+    #saveFileModal .storage-option .storage-capacity {
+      font-size: 0.85rem;
+      color: #4b5563; /* gray-600 */
+    }
+    #saveFileModal .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    #saveFileModal .checkbox-group label {
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      user-select: none;
+      color: #374151;
+    }
+    #saveFileModal .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #2563eb;
+    }
+    #saveFileModal > .modal-content > footer {
+      padding: 1rem 1.5rem;
+      background-color: #daeafd; /* green-50 */
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+    #saveFileModal > .modal-content > footer button {
+      padding: 0.5rem 1.25rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background-color 0.2s;
+    }
+    #saveFileModal > .modal-content > footer button.cancel-save-btn {
+      background-color: #d1d5db;
+      color: #374151;
+    }
+    #saveFileModal > .modal-content > footer button.cancel-save-btn:hover {
+      background-color: #9ca3af;
+    }
+    #saveFileModal > .modal-content > footer button.confirm-save-btn {
+      background-color: #2563eb;
+      color: white;
+    }
+    #saveFileModal > .modal-content > footer button.confirm-save-btn:hover {
+      background-color: #03297c;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #saveFileModal > .modal-content {
+        max-width: 100%;
+        max-height: 90vh;
+      }
+    }
+
+    /* Search Panel Styles */
+    #searchPanel {
+      position: absolute;
+      top: 42px; /* below toolbar (which is 40px height + 2px border) */
+      right: 1rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+      padding: 1rem 1.25rem;
+      width: 320px;
+      z-index: 100;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      color: #111827;
+    }
+    #searchPanel.hidden {
+      display: none;
+    }
+    #searchPanel input#searchInput {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #111827;
+      outline-offset: 2px;
+      outline-color: transparent;
+      transition: border-color 0.2s;
+      background-color: white;
+    }
+    #searchPanel input#searchInput:focus {
+      border-color: #2563eb;
+      outline: 2px solid #2563eb;
+    }
+    #searchPanel input#replaceInput {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #111827;
+      outline-offset: 2px;
+      outline-color: transparent;
+      transition: border-color 0.2s;
+      background-color: white;
+    }
+    #searchPanel input#replaceInput:focus {
+      border-color: #2563eb;
+      outline: 2px solid #2563eb;
+    }
+    #searchPanel .buttons-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    #searchPanel button {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      user-select: none;
+      border: none;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    #doSearch {
+      background-color: #2563eb;
+      color: white;
+    }
+    #doSearch:hover {
+      background-color: #2563eb;
+    }
+    #doReplace {
+      background-color: #e5e7eb;
+      color: #374151;
+    }
+    #doReplace:hover {
+      background-color: #d1d5db;
+    }
+    #searchOptionsBtn {
+      background-color: #e5e7eb;
+      color: #374151;
+    }
+    #searchOptionsBtn:hover {
+      background-color: #d1d5db;
+    }
+
+    /* Responsive search panel */
+    @media (max-width: 400px) {
+      #searchPanel {
+        width: 90vw;
+        right: 5vw;
+        top: 45px;
+        padding: 0.75rem 1rem;
+      }
+      #searchPanel button {
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Dark mode styles */
+    .dark body {
+      background-color: #1f2937; /* gray-800 */
+      color: #d1d5db; /* gray-300 */
+    }
+    .dark header,
+    .dark #toolbar,
+    .dark .tabs,
+    .dark #openFileModal > .modal-content,
+    .dark #saveFileModal > .modal-content,
+    .dark #searchPanel {
+      background-color: #374151; /* gray-700 */
+      color: #d1d5db;
+      border-color: #4b5563; /* gray-600 */
+    }
+    .dark header nav button,
+    .dark #toolbar button,
+    .dark .tabs .tab {
+      color: #d1d5db;
+    }
+    .dark .tabs {
+      border-bottom-color: #4b5563;
+    }
+    .dark .tabs .tab:hover {
+      background-color: #4b5563;
+    }
+    .dark .tabs .tab.active {
+      background-color: #2563eb;
+      color: white;
+      border-bottom-color: #3b82f6;
+    }
+    .dark .tab .close-btn {
+      color: #9ca3af;
+    }
+    .dark .tab .close-btn:hover {
+      color: #2563eb;
+      background-color: #7f1d1d;
+    }
+    .dark textarea#textEditor {
+      background-color: #111827; /* gray-900 */
+      color: #d1d5db;
+      border-color: #4b5563;
+    }
+    .dark textarea#textEditor:focus {
+      outline-color: #3b82f6;
+    }
+    .dark textarea#textEditor::-webkit-scrollbar-thumb {
+      background-color: #4b5563;
+    }
+    .dark #openFileModal > .modal-content > header {
+      background-color: #2563eb;
+      color: white;
+    }
+    .dark #openFileModal .sidebar {
+      background-color: #1f2937;
+      border-right-color: #4b5563;
+    }
+    .dark #openFileModal .sidebar button {
+      color: #d1d5db;
+    }
+    .dark #openFileModal .sidebar button:hover,
+    .dark #openFileModal .sidebar button.active {
+      background-color: #2563eb;
+      color: white;
+    }
+    .dark #openFileModal .file-list-container {
+      background-color: #1f2937;
+      color: #d1d5db;
+    }
+    .dark #openFileModal .file-list-tabs {
+      border-bottom-color: #4b5563;
+    }
+    .dark #openFileModal .file-list-tabs button {
+      color: #9ca3af;
+    }
+    .dark #openFileModal .file-list-tabs button.active {
+      color: #60a5fa;
+      border-bottom-color: #60a5fa;
+    }
+    .dark #openFileModal .file-list {
+      background-color: #1f2937;
+      color: #d1d5db;
+    }
+    .dark #openFileModal .file-list-item {
+      color: #d1d5db;
+    }
+    .dark #openFileModal .file-list-item:hover {
+      background-color: #2563eb;
+      color: white;
+    }
+    .dark #openFileModal .file-list-item.selected {
+      background-color: #2563eb;
+      color: white;
+    }
+    .dark #openFileModal .file-list-item i.file-icon {
+      color: #60a5fa;
+    }
+    .dark #openFileModal .file-list-item.selected i.file-icon {
+      color: white !important;
+    }
+    .dark #openFileModal .file-list-item .file-location,
+    .dark #openFileModal .file-list-item .file-date {
+      color: #9ca3af;
+    }
+    .dark #openFileModal .file-list-item .star-icon {
+      color: #6b7280;
+    }
+    .dark #openFileModal .file-list-item .star-icon.favorited {
+      color: #fbbf24;
+    }
+    .dark #openFileModal .file-list-item .star-icon:hover {
+      color: #f59e0b;
+    }
+    .dark #openFileModal > .modal-content > footer {
+      background-color: #374151;
+      color: #d1d5db;
+    }
+    .dark #openFileModal > .modal-content > footer button.cancel-btn {
+      background-color: #4b5563;
+      color: #d1d5db;
+    }
+    .dark #openFileModal > .modal-content > footer button.cancel-btn:hover {
+      background-color: #6b7280;
+    }
+    .dark #openFileModal > .modal-content > footer button.open-btn {
+      background-color: #2563eb;
+      color: white;
+    }
+    .dark #openFileModal > .modal-content > footer button.open-btn:disabled {
+      background-color: #93c5fd;
+      cursor: not-allowed;
+    }
+    .dark #openFileModal > .modal-content > footer button.open-btn:hover:not(:disabled) {
+      background-color: #1e40af;
+    }
+    .dark #saveFileModal > .modal-content {
+      background-color: #1f2937;
+      color: #d1d5db;
+    }
+    .dark #saveFileModal > .modal-content > header {
+      background-color: #16a34a;
+      color: white;
+    }
+    .dark #saveFileModal input[type="text"] {
+      background-color: #111827;
+      color: #d1d5db;
+      border-color: #4b5563;
+    }
+    .dark #saveFileModal input[type="text"]:focus {
+      outline-color: #2563eb;
+    }
+    .dark #saveFileModal .storage-option {
+      background-color: #032760;
+      color: #d1d5db;
+      border-color: #4b5563;
+    }
+    .dark #saveFileModal .storage-option.selected {
+      background-color: #041f58;
+      border-color: #2563eb;
+      color: white;
+    }
+    .dark #saveFileModal .checkbox-group label {
+      color: #d1d5db;
+    }
+    .dark #saveFileModal > .modal-content > footer {
+      background-color: #166534;
+    }
+    .dark #saveFileModal > .modal-content > footer button.cancel-save-btn {
+      background-color: #4b5563;
+      color: #d1d5db;
+    }
+    .dark #saveFileModal > .modal-content > footer button.cancel-save-btn:hover {
+      background-color: #6b7280;
+    }
+    .dark #saveFileModal > .modal-content > footer button.confirm-save-btn {
+      background-color: #09338c;
+      color: white;
+    }
+    .dark #saveFileModal > .modal-content > footer button.confirm-save-btn:hover {
+      background-color: #0a2d7a;
+    }
+    .dark #searchPanel {
+      background-color: #374151;
+      color: #d1d5db;
+    }
+    .dark #searchPanel input#searchInput,
+    .dark #searchPanel input#replaceInput {
+      background-color: #1f2937;
+      color: #d1d5db;
+      border-color: #4b5563;
+    }
+    .dark #searchPanel input#searchInput:focus,
+    .dark #searchPanel input#replaceInput:focus {
+      border-color: #2563eb;
+      outline-color: #2563eb;
+    }
+    .dark #searchPanel button#doSearch {
+      background-color: #2563eb;
+      color: white;
+    }
+    .dark #searchPanel button#doSearch:hover {
+      background-color: #0f58f5;
+    }
+    .dark #searchPanel button#doReplace {
+      background-color: #4b5563;
+      color: #d1d5db;
+    }
+    .dark #searchPanel button#doReplace:hover {
+      background-color: #6b7280;
+    }
+    .dark #searchPanel button#searchOptionsBtn {
+      background-color: #4b5563;
+      color: #d1d5db;
+    }
+    .dark #searchPanel button#searchOptionsBtn:hover {
+      background-color: #6b7280;
+    }
+
+    /* EDIT MENU BAR STYLES */
+    #editToolbar {
+      height: 40px;
+      border-bottom: 1px solid #d1d5db;
+      display: none; /* default hidden */
+      align-items: center;
+      padding: 0 0.75rem;
+      gap: 0.5rem;
+      background-color: #f9fafb;
+      color: #374151;
+      user-select: none;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+    #editToolbar.visible {
+      display: flex;
+    }
+    #editToolbar::-webkit-scrollbar {
+      height: 6px;
+    }
+    #editToolbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 3px;
+    }
+    #editToolbar select,
+    #editToolbar button {
+      background: transparent;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      color: #374151;
+      cursor: pointer;
+      transition: background-color 0.2s, border-color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      user-select: none;
+      white-space: nowrap;
+    }
+    #editToolbar select:focus,
+    #editToolbar button:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+      border-color: #3b82f6;
+    }
+    #editToolbar button:hover,
+    #editToolbar select:hover {
+      background-color: #e5e7eb;
+      border-color: #3b82f6;
+    }
+    #editToolbar button i {
+      pointer-events: none;
+    }
+    #editToolbar button.active {
+      background-color: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+    #editToolbar button.active:hover {
+      background-color: #2563eb;
+      border-color: #2563eb;
+    }
+    /* Responsive */
+    @media (max-width: 640px) {
+      #editToolbar {
+        padding: 0 0.5rem;
+      }
+      #editToolbar select,
+      #editToolbar button {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+      }
+    }
+
+    /* Dark mode styles for editToolbar controls */
+    .dark #editToolbar {
+      background-color: #374151;
+      color: #d1d5db;
+      border-color: #4b5563;
+    }
+    .dark #editToolbar select,
+    .dark #editToolbar button {
+      color: #d1d5db;
+      border-color: #4b5563;
+      background: transparent;
+    }
+    .dark #editToolbar select:focus,
+    .dark #editToolbar button:focus {
+      outline-color: #60a5fa;
+      border-color: #60a5fa;
+    }
+    .dark #editToolbar button:hover,
+    .dark #editToolbar select:hover {
+      background-color: #4b5563;
+      border-color: #60a5fa;
+    }
+    .dark #editToolbar button.active {
+      background-color: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+    .dark #editToolbar button.active:hover {
+      background-color: #1e40af;
+      border-color: #1e40af;
+    }
+
+    /* Modern color input styling */
+    #fontColorInput {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      border: none;
+      border-radius: 0.375rem;
+      width: 2.5rem;
+      height: 1.75rem;
+      cursor: pointer;
+      padding: 0;
+      transition: box-shadow 0.3s ease, transform 0.15s ease;
+      box-shadow: 0 0 0 1px #d1d5db;
+    }
+    #fontColorInput::-webkit-color-swatch-wrapper {
+      padding: 0;
+      border-radius: 0.375rem;
+    }
+    #fontColorInput::-webkit-color-swatch {
+      border-radius: 0.375rem;
+      border: none;
+    }
+    #fontColorInput:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px #3b82f6;
+      transform: scale(1.1);
+    }
+    #fontColorInput:hover {
+      box-shadow: 0 0 0 2px #3b82f6;
+    }
+
+    /* Help Modal Styles */
+    #helpModal {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.3);
+      display: none;
+      z-index: 80;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #helpModal.active {
+      display: flex;
+    }
+    #helpModal > .modal-content {
+      background: white;
+      border-radius: 0.5rem;
+      width: 100%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      color: #374151;
+      background-color: #f9fafb;
+      user-select: text;
+    }
+    #helpModal > .modal-content > header {
+      background-color: #2563eb; /* blue-600 */
+      color: white;
+      padding: 1rem 1.5rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      user-select: none;
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #helpModal > .modal-content > header button.close-help-modal {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      user-select: none;
+      transition: color 0.2s;
+    }
+    #helpModal > .modal-content > header button.close-help-modal:hover {
+      color: #93c5fd; /* lighter blue */
+    }
+    #helpModal > .modal-content > main {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    #helpModal > .modal-content > main h2 {
+      font-weight: 700;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      color: #1e40af;
+    }
+    #helpModal > .modal-content > main ul {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    #helpModal > .modal-content > main ul li {
+      margin-bottom: 0.4rem;
+    }
+    /* Dark mode for help modal */
+    .dark #helpModal > .modal-content {
+      background-color: #374151;
+      color: #d1d5db;
+    }
+    .dark #helpModal > .modal-content > header {
+      background-color: #2563eb;
+      color: white;
+    }
+    .dark #helpModal > .modal-content > header button.close-help-modal {
+      color: white;
+    }
+    .dark #helpModal > .modal-content > header button.close-help-modal:hover {
+      color: #93c5fd;
+    }
+
+    /* Error Modal Styles */
+    #errorModal {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.4);
+      display: none;
+      z-index: 90;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #errorModal.active {
+      display: flex;
+    }
+    #errorModal > .modal-content {
+      background: white;
+      border-radius: 0.5rem;
+      width: 100%;
+      max-width: 480px;
+      max-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      color: #2563eb; /* red-700 */
+      background-color: #e7eefb; /* red-100 */
+      user-select: text;
+    }
+    #errorModal > .modal-content > header {
+      background-color: #2563eb; /* red-700 */
+      color: white;
+      padding: 1rem 1.5rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      user-select: none;
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #errorModal > .modal-content > header button.close-error-modal {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      user-select: none;
+      transition: color 0.2s;
+    }
+    #errorModal > .modal-content > header button.close-error-modal:hover {
+      color: #9ab6f4; /* lighter red */
+    }
+    #errorModal > .modal-content > main {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      font-size: 1rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    /* Dark mode for error modal */
+    .dark #errorModal > .modal-content {
+      background-color: #042c81;
+      color: #fee2e2;
+    }
+    .dark #errorModal > .modal-content > header {
+      background-color: #4576e0;
+      color: white;
+    }
+    .dark #errorModal > .modal-content > header button.close-error-modal {
+      color: white;
+    }
+    .dark #errorModal > .modal-content > header button.close-error-modal:hover {
+      color: #9cb8f5;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen bg-white text-gray-900 relative">
+  <!-- Top menu bar -->
+  <header class="flex items-center px-4 py-2 border-b border-gray-200 select-none dark:border-gray-600">
+    <div class="flex items-center space-x-1 text-blue-600 font-semibold text-sm cursor-pointer dark:text-blue-400">
+      <i class="fas fa-pen fa-sm"></i>
+      <span>𝓝𝓸𝓽𝓮𝓹𝓪𝓭𝓮</span>
+    </div>
+    <nav class="ml-6 flex space-x-6 text-gray-800 text-sm font-normal dark:text-gray-300">
+      <button id="fileBtn" class="hover:underline focus:outline-none">File</button>
+      <button id="editBtn" class="hover:underline focus:outline-none">Edit</button>
+      <button id="helpBtn" class="hover:underline focus:outline-none">Help</button>
+      <button id="undoBtn" aria-label="Undo" class="hover:text-gray-900 relative group flex items-center gap-1 dark:hover:text-white" disabled>
+        <i class="fas fa-undo fa-lg"></i>
+        <span class="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" style="top:100%; margin-top:0.25rem;">Undo</span>
+      </button>
+      <button id="redoBtn" aria-label="Redo" class="hover:text-gray-900 relative group flex items-center gap-1 dark:hover:text-white" disabled>
+        <i class="fas fa-redo fa-lg"></i>
+        <span class="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" style="top:100%; margin-top:0.25rem;">Redo</span>
+      </button>
+      <button id="searchBtn" aria-label="Search" class="hover:text-gray-900 relative group flex items-center gap-1 dark:hover:text-white">
+        <i class="fas fa-search fa-lg"></i>
+        <span class="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" style="top:100%; margin-top:0.25rem;">Search</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Toolbar -->
+  <div id="toolbar" class="h-10 border-b border-gray-200 flex items-center px-4 space-x-4 text-gray-600 hidden dark:border-gray-600 dark:text-gray-300">
+    <button id="newFileBtn" aria-label="New file" class="hover:text-gray-900 relative group dark:hover:text-white">
+      <i class="far fa-file fa-lg"></i>
+      <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">New file</span>
+    </button>
+    <button id="openFileBtn" aria-label="Open file" class="hover:text-gray-900 relative group flex items-center gap-1 dark:hover:text-white">
+      <i class="fas fa-folder-open fa-lg"></i>
+      <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">Open file</span>
+    </button>
+    
+    <button id="saveBtn" aria-label="Save" class="hover:text-gray-900 relative group dark:hover:text-white" disabled>
+      <i class="far fa-save fa-lg"></i>
+      <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">Save</span>
+    </button>
+    <div class="border-l border-gray-300 h-6 dark:border-gray-600"></div>
+    <button id="toggleThemeBtn" aria-label="Toggle theme" class="hover:text-gray-900 relative group dark:hover:text-white">
+      <i id="themeIcon" class="fas fa-sun fa-lg"></i>
+      <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">Toggle theme</span>
+    </button>
+  </div>
+
+  <!-- Edit Toolbar -->
+  <div id="editToolbar" aria-label="Edit toolbar with formatting options" role="toolbar" aria-live="polite" aria-atomic="true" tabindex="0">
+    <!-- Font family -->
+    <select id="fontFamilySelect" aria-label="Font family">
+      <option value="Inter" selected>Inter</option>
+      <option value="Arial">Arial</option>
+      <option value="Courier New">Courier New</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Times New Roman">Times New Roman</option>
+      <option value="Verdana">Verdana</option>
+    </select>
+
+    <!-- Font size -->
+    <select id="fontSizeSelect" aria-label="Font size">
+      <option value="12px">12</option>
+      <option value="14px" selected>14</option>
+      <option value="16px">16</option>
+      <option value="18px">18</option>
+      <option value="20px">20</option>
+      <option value="24px">24</option>
+      <option value="28px">28</option>
+      <option value="32px">32</option>
+    </select>
+
+    <!-- Font color -->
+    <input type="color" id="fontColorInput" aria-label="Font color" value="#111827" title="Font color" />
+
+    <!-- Bold -->
+    <button id="boldBtn" type="button" aria-pressed="false" aria-label="Bold (Ctrl+B)" title="Bold (Ctrl+B)">
+      <b>B</b>
+    </button>
+
+    <!-- Italic -->
+    <button id="italicBtn" type="button" aria-pressed="false" aria-label="Italic (Ctrl+I)" title="Italic (Ctrl+I)">
+      <i><em>/</em></i>
+    </button>
+
+    <!-- Underline -->
+    <button id="underlineBtn" type="button" aria-pressed="false" aria-label="Underline (Ctrl+U)" title="Underline (Ctrl+U)">
+      <u>U</u>
+    </button>
+
+    <!-- Align left -->
+    <button id="alignLeftBtn" type="button" aria-label="Align left" title="Align left">
+      <i class="fas fa-align-left"></i>
+    </button>
+
+    <!-- Align center -->
+    <button id="alignCenterBtn" type="button" aria-label="Align center" title="Align center">
+      <i class="fas fa-align-center"></i>
+    </button>
+
+    <!-- Align right -->
+    <button id="alignRightBtn" type="button" aria-label="Align right" title="Align right">
+      <i class="fas fa-align-right"></i>
+    </button>
+
+    <!-- Justify -->
+    <button id="justifyBtn" type="button" aria-label="Justify" title="Justify">
+      <i class="fas fa-align-justify"></i>
+    </button>
+  </div>
+
+  <!-- Tabs container -->
+  <div class="tabs" id="tabsContainer" aria-label="Open documents tabs"></div>
+
+  <!-- Editor container -->
+  <div class="editor-container">
+    <textarea
+      id="textEditor"
+      aria-label="Text editor"
+      placeholder="Start typing here..."
+      spellcheck="false"
+    ></textarea>
+  </div>
+
+  <!-- Search Panel -->
+  <div id="searchPanel" class="hidden" role="search" aria-label="Search and replace panel">
+    <input type="text" id="searchInput" placeholder="Cari teks..." aria-label="Search text" autocomplete="off" />
+    <input type="text" id="replaceInput" placeholder="Ganti dengan..." aria-label="Replace text" autocomplete="off" />
+    <div class="buttons-row">
+      <button id="doSearch" type="button" aria-label="Cari"><i class="fas fa-search"></i> Cari</button>
+      <button id="doReplace" type="button" aria-label="Ganti"><i class="fas fa-sync-alt"></i> Ganti</button>
+      <button id="searchOptionsBtn" type="button" aria-label="Opsi pencarian"><i class="fas fa-cog"></i> Opsi</button>
+    </div>
+  </div>
+
+  <!-- Modal for New File -->
+  <div id="modal" class="fixed inset-0 hidden modal-backdrop z-50 flex items-center justify-center px-4 bg-black bg-opacity-30">
+    <div class="bg-white rounded-lg shadow-lg w-96 max-w-full p-6 dark:bg-gray-800 dark:text-gray-300">
+      <h2 class="text-lg font-semibold mb-4 text-center">ℬ𝓊𝒶𝓉 𝒻𝒾𝓁ℯ ℬ𝒶𝓇𝓊</h2>
+      <form id="newFileForm" class="flex flex-col space-y-4" autocomplete="off">
+        <div>
+          <label for="fileName" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Nama File</label>
+          <input
+            type="text"
+            id="fileName"
+            name="fileName"
+            placeholder="File tanpa judul"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+          />
+        </div>
+        <div>
+          <label for="template" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Template</label>
+          <select
+            id="template"
+            name="template"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+          >
+            <option value="blank">Dokumen Kosong</option>
+            <option value="todo">To-Do List</option>
+            <option value="meeting">Catatan Rapat</option>
+            <option value="journal">Jurnal Harian</option>
+            <option value="lecture">Catatan Kuliah</option>
+            <option value="project">Proyek</option>
+            <option value="snippet">Snippet Kode</option>
+          </select>
+        </div>
+        <div class="flex justify-end space-x-3 pt-2">
+          <button
+            type="button"
+            id="cancelBtn"
+            class="px-4 py-2 rounded-md bg-gray-300 text-gray-700 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          >
+            Buat File
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal for Open File -->
+  <div id="openFileModal" role="dialog" aria-modal="true" aria-labelledby="openFileModalTitle">
+    <div class="modal-content" tabindex="-1">
+      <header id="openFileModalTitle">ℬ𝓊𝓀𝒶 ℱ𝒾𝓁ℯ</header>
+      <main>
+        <nav class="sidebar" aria-label="Folder navigation">
+          <button type="button" data-folder="Dokumen" class="active" aria-current="page">
+            <i class="fas fa-folder"></i> Dokumen
+          </button>
+          <button type="button" data-folder="Desktop">
+            <i class="fas fa-desktop"></i> Desktop
+          </button>
+          <button type="button" data-folder="Drive D:">
+            <i class="fas fa-hdd"></i> Drive D:
+          </button>
+          <button type="button" data-folder="Cloud Storage">
+            <i class="fas fa-cloud"></i> Cloud Storage
+          </button>
+        </nav>
+        <section class="file-list-container" aria-label="Daftar file">
+          <div class="file-list-tabs" role="tablist">
+            <button type="button" role="tab" aria-selected="true" class="active" data-tab="Terbaru" tabindex="0">Terbaru</button>
+            <button type="button" role="tab" aria-selected="false" data-tab="Favorit" tabindex="-1">Favorit</button>
+          </div>
+          <ul class="file-list" tabindex="0" aria-live="polite" aria-relevant="additions removals" role="list"></ul>
+        </section>
+      </main>
+      <footer>
+        <div class="status" aria-live="polite" aria-atomic="true">Belum ada file yang dipilih</div>
+        <div class="buttons">
+          <button type="button" class="cancel-btn" id="openFileCancelBtn"><i class="fas fa-times"></i> Batal</button>
+          <button type="button" class="open-btn" id="openFileOpenBtn" disabled><i class="fas fa-check"></i> Buka</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal for Save File -->
+  <div id="saveFileModal" role="dialog" aria-modal="true" aria-labelledby="saveFileModalTitle" aria-describedby="saveFileModalDesc">
+    <div class="modal-content" tabindex="-1">
+      <header>
+        <span id="saveFileModalTitle">𝒮𝒾𝓂𝓅𝒶𝓃 ℱ𝒾𝓁ℯ</span>
+        <button type="button" class="close-save-modal" aria-label="Close save modal">&times;</button>
+      </header>
+      <main>
+        <form id="saveFileForm" class="flex flex-col gap-6" novalidate>
+          <div>
+            <label for="saveFileName">Nama File (.txt)</label>
+            <input type="text" id="saveFileName" name="saveFileName" placeholder="nama-file.txt" required pattern=".*\.txt$" />
+          </div>
+          <div>
+            <label>Lokasi Penyimpanan</label>
+            <div class="storage-options" role="list" aria-label="Storage options">
+              <div tabindex="0" role="listitem" class="storage-option selected" data-storage="Dokumen" aria-selected="true">
+                <i class="fas fa-folder"></i>
+                <div class="storage-info">
+                  <span class="storage-name">Dokumen</span>
+                </div>
+              </div>
+              <div tabindex="0" role="listitem" class="storage-option" data-storage="Desktop" aria-selected="false">
+                <i class="fas fa-desktop"></i>
+                <div class="storage-info">
+                  <span class="storage-name">Desktop</span>
+                </div>
+              </div>
+              <div tabindex="0" role="listitem" class="storage-option" data-storage="Drive D:" aria-selected="false">
+                <i class="fas fa-hdd"></i>
+                <div class="storage-info">
+                  <span class="storage-name">Drive D:</span>
+                  <span class="storage-capacity">500 GB free</span>
+                </div>
+              </div>
+              <div tabindex="0" role="listitem" class="storage-option" data-storage="Cloud Storage" aria-selected="false">
+                <i class="fas fa-cloud"></i>
+                <div class="storage-info">
+                  <span class="storage-name">Cloud Storage</span>
+                  <span class="storage-capacity">2 GB free</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="saveFolderPath">Folder Tujuan</label>
+            <input type="text" id="saveFolderPath" name="saveFolderPath" value="/Dokumen/Laporan/2025/" />
+          </div>
+          <div class="checkbox-group">
+            <label><input type="checkbox" id="autoSaveCheckbox" name="autoSave" /> Aktifkan auto-save (5 menit)</label>
+            <label><input type="checkbox" id="readOnlyCheckbox" name="readOnly" /> Simpan sebagai read-only</label>
+          </div>
+          <div class="flex justify-end gap-4 pt-2">
+            <button type="button" class="cancel-save-btn">Batal</button>
+            <button type="submit" class="confirm-save-btn"><i class="fas fa-save"></i> Simpan</button>
+          </div>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal for Help -->
+  <div id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle" aria-describedby="helpModalDesc">
+    <div class="modal-content" tabindex="-1">
+      <header>
+        <span id="helpModalTitle">ℬ𝒶𝓃𝓉𝓊𝒶𝓃 ℳℴ𝒹ℯ𝓇𝓃𝒯ℯ𝓍𝓉</span>
+        <button type="button" class="close-help-modal" aria-label="Close help modal">&times;</button>
+      </header>
+      <main id="helpModalDesc">
+        <h2>Menu File</h2>
+        <ul>
+          <li><strong>New File:</strong> Membuat dokumen baru dengan pilihan template.</li>
+          <li><strong>Open File:</strong> Membuka dokumen yang sudah ada dari folder yang tersedia.</li>
+          <li><strong>Save:</strong> Menyimpan dokumen saat ini ke lokasi yang dipilih.</li>
+          
+        </ul>
+        <h2>Menu Edit</h2>
+        <ul>
+          <li><strong>Undo (Ctrl+Z):</strong> Membatalkan aksi terakhir.</li>
+          <li><strong>Redo (Ctrl+Y):</strong> Mengulangi aksi yang dibatalkan.</li>
+          <li><strong>Cut (Ctrl+X):</strong> Memotong teks yang dipilih.</li>
+          <li><strong>Copy (Ctrl+C):</strong> Menyalin teks yang dipilih.</li>
+          <li><strong>Paste (Ctrl+V):</strong> Menempelkan teks dari clipboard.</li>
+          <li><strong>Find (Ctrl+F):</strong> Mencari teks dalam dokumen.</li>
+          <li><strong>Select All (Ctrl+A):</strong> Memilih semua teks dalam dokumen.</li>
+        </ul>
+        <h2>Toolbar Format</h2>
+        <ul>
+          <li>Mengubah font, ukuran, warna, dan gaya teks (bold, italic, underline).</li>
+          <li>Mengatur perataan teks (kiri, tengah, kanan, justify).</li>
+        </ul>
+        <h2>Catatan</h2>
+        <p>Notepad adalah editor teks modern berbasis web dengan fitur tab, template, dan penyimpanan lokal. Gunakan menu dan toolbar untuk mengakses fitur-fitur utama.</p>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal for Error Messages -->
+  <div id="errorModal" role="alertdialog" aria-modal="true" aria-labelledby="errorModalTitle" aria-describedby="errorModalDesc">
+    <div class="modal-content" tabindex="-1">
+      <header>
+        <span id="errorModalTitle">Kesalahan</span>
+        <button type="button" class="close-error-modal" aria-label="Close error modal">&times;</button>
+      </header>
+      <main id="errorModalDesc"></main>
+    </div>
+  </div>
+
+  <script>
+    // Elements
+    const fileBtn = document.getElementById('fileBtn');
+    const editBtn = document.getElementById('editBtn');
+    const helpBtn = document.getElementById('helpBtn');
+    const toolbar = document.getElementById('toolbar');
+    const editToolbar = document.getElementById('editToolbar');
+    const newFileBtn = document.getElementById('newFileBtn');
+    const textEditor = document.getElementById('textEditor');
+    const modal = document.getElementById('modal');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const newFileForm = document.getElementById('newFileForm');
+    const fileNameInput = document.getElementById('fileName');
+    const templateSelect = document.getElementById('template');
+    const tabsContainer = document.getElementById('tabsContainer');
+
+    const openFileModal = document.getElementById('openFileModal');
+    const openFileBtn = document.getElementById('openFileBtn');
+    const openFileCancelBtn = document.getElementById('openFileCancelBtn');
+    const openFileOpenBtn = document.getElementById('openFileOpenBtn');
+    const sidebarButtons = openFileModal.querySelectorAll('.sidebar button');
+    const fileListTabs = openFileModal.querySelectorAll('.file-list-tabs button');
+    const fileListContainer = openFileModal.querySelector('.file-list');
+    const statusText = openFileModal.querySelector('.status');
+
+    // Save modal elements
+    const saveFileModal = document.getElementById('saveFileModal');
+    const saveFileForm = document.getElementById('saveFileForm');
+    const saveFileNameInput = document.getElementById('saveFileName');
+    const saveFolderPathInput = document.getElementById('saveFolderPath');
+    const storageOptions = saveFileModal.querySelectorAll('.storage-option');
+    const closeSaveModalBtn = saveFileModal.querySelector('button.close-save-modal');
+    const cancelSaveBtn = saveFileModal.querySelector('button.cancel-save-btn');
+    const saveBtn = document.getElementById('saveBtn');
+
+    // Undo/Redo buttons in menu bar
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+
+    // Search panel elements
+    const searchBtn = document.getElementById('searchBtn');
+    const searchPanel = document.getElementById('searchPanel');
+    const searchInput = document.getElementById('searchInput');
+    const replaceInput = document.getElementById('replaceInput');
+    const doSearchBtn = document.getElementById('doSearch');
+    const doReplaceBtn = document.getElementById('doReplace');
+    const searchOptionsBtn = document.getElementById('searchOptionsBtn');
+
+    // Toggle theme button and icon
+    const toggleThemeBtn = document.getElementById('toggleThemeBtn');
+    const themeIcon = document.getElementById('themeIcon');
+
+    // Edit toolbar controls
+    const fontFamilySelect = document.getElementById('fontFamilySelect');
+    const fontSizeSelect = document.getElementById('fontSizeSelect');
+    const fontColorInput = document.getElementById('fontColorInput');
+    const boldBtn = document.getElementById('boldBtn');
+    const italicBtn = document.getElementById('italicBtn');
+    const underlineBtn = document.getElementById('underlineBtn');
+    const alignLeftBtn = document.getElementById('alignLeftBtn');
+    const alignCenterBtn = document.getElementById('alignCenterBtn');
+    const alignRightBtn = document.getElementById('alignRightBtn');
+    const justifyBtn = document.getElementById('justifyBtn');
+
+    // Help modal elements
+    const helpModal = document.getElementById('helpModal');
+    const closeHelpModalBtn = helpModal.querySelector('button.close-help-modal');
+
+    // Error modal elements
+    const errorModal = document.getElementById('errorModal');
+    const errorModalContent = errorModal.querySelector('main');
+    const closeErrorModalBtn = errorModal.querySelector('button.close-error-modal');
+
+    // Templates content
+    const templatesContent = {
+      blank: '',
+      todo: `[ ] Tugas 1
+[ ] Tugas 2
+[ ] Tugas 3`,
+      meeting: `Tanggal: 
+Topik: 
+Peserta: 
+
+Ringkasan: 
+- 
+- 
+
+Tindak Lanjut: 
+- [ ] Nama - Aksi yang harus dilakukan`,
+      journal: `Tanggal: 
+Mood: 😁😐😞
+
+Catatan Hari Ini: 
+- `,
+      lecture: `Mata Kuliah: 
+Topik: 
+Dosen: 
+
+Ringkasan Materi: 
+- 
+Pertanyaan: 
+- `,
+      project: `Nama Proyek: 
+Tujuan: 
+Deadline: 
+
+Langkah-Langkah: 
+- [ ] Langkah 1
+- [ ] Langkah 2`,
+      snippet: `Bahasa: 
+Fungsi: 
+
+\`\`\`js
+// contoh kode
+function namaFungsi() {
+  // isi
+}
+\`\`\`
+
+Catatan:
+-`
+    };
+
+    // Tabs data
+    let tabs = [];
+    let tabIdCounter = 0;
+
+    // Favorites stored in localStorage as array of file ids
+    const FAVORITES_STORAGE_KEY = 'moderntext_favorites';
+    let favorites = [];
+
+    function loadFavorites() {
+      try {
+        const fav = localStorage.getItem(FAVORITES_STORAGE_KEY);
+        favorites = fav ? JSON.parse(fav) : [];
+      } catch {
+        favorites = [];
+      }
+    }
+    function saveFavorites() {
+      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+    }
+
+    loadFavorites();
+
+    // Simulated files data
+    let simulatedFiles = [
+      {
+        id: 'file1',
+        name: 'Laporan_Q1_2025.txt',
+        folder: 'Dokumen/Laporan/',
+        lastModified: '10 Mei 2025',
+        content: `Laporan Kuartal 1 Tahun 2025\n\nPendahuluan:\n- ...\n\nIsi Laporan:\n- ...\n\nKesimpulan:\n- ...`
+      },
+      {
+        id: 'file2',
+        name: 'Catatan_Rapat.txt',
+        folder: 'Dokumen/Rapat/',
+        lastModified: '5 Mei 2025',
+        content: `Catatan Rapat Tim Proyek\n\nTanggal: 5 Mei 2025\nPeserta: ...\n\nAgenda:\n- ...\n\nHasil:\n- ...`
+      },
+      {
+        id: 'file3',
+        name: 'Draft_Proposal.txt',
+        folder: 'Dokumen/Proposal/',
+        lastModified: '1 Mei 2025',
+        content: `Draft Proposal Proyek Baru\n\nPendahuluan:\n- ...\n\nTujuan:\n- ...\n\nRencana Kerja:\n- ...`
+      },
+      {
+        id: 'file4',
+        name: 'Todo_List.txt',
+        folder: 'Desktop/',
+        lastModified: '12 Mei 2025',
+        content: `[ ] Belanja\n[ ] Kirim email\n[ ] Meeting dengan klien`
+      },
+      {
+        id: 'file5',
+        name: 'Favorite_Notes.txt',
+        folder: 'Cloud Storage/Notes/',
+        lastModified: '8 Mei 2025',
+        content: `Catatan penting favorit saya\n- ...`
+      }
+    ];
+
+    // State
+    let currentFolder = 'Dokumen';
+    let currentTab = 'Terbaru';
+    let selectedFileId = null;
+
+    // Undo/Redo stacks and flag
+    let undoStack = [];
+    let redoStack = [];
+    let isUndoRedo = false; // flag to prevent stacking during undo/redo
+
+    // Utility functions
+    function isFavorite(fileId) {
+      return favorites.includes(fileId);
+    }
+    function addFavorite(fileId) {
+      if (!favorites.includes(fileId)) {
+        favorites.push(fileId);
+        saveFavorites();
+      }
+    }
+    function removeFavorite(fileId) {
+      const idx = favorites.indexOf(fileId);
+      if (idx !== -1) {
+        favorites.splice(idx, 1);
+        saveFavorites();
+      }
+    }
+
+    // Show error modal with message
+    function showError(message) {
+      errorModalContent.textContent = message;
+      errorModal.classList.add('active');
+      errorModal.querySelector('.modal-content').focus();
+    }
+    // Close error modal
+    closeErrorModalBtn.addEventListener('click', () => {
+      errorModal.classList.remove('active');
+    });
+    errorModal.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        errorModal.classList.remove('active');
+      }
+      if (e.key === 'Tab') {
+        const focusableElements = errorModal.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+        const focusable = Array.prototype.filter.call(focusableElements, el => !el.disabled && el.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    });
+
+    // UI update functions
+    function setActiveFolder(folderName) {
+      currentFolder = folderName;
+      sidebarButtons.forEach(btn => {
+        if (btn.dataset.folder === folderName) {
+          btn.classList.add('active');
+          btn.setAttribute('aria-current', 'page');
+        } else {
+          btn.classList.remove('active');
+          btn.removeAttribute('aria-current');
+        }
+      });
+    }
+    function setActiveTab(tabName) {
+      currentTab = tabName;
+      fileListTabs.forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+          btn.classList.add('active');
+          btn.setAttribute('aria-selected', 'true');
+          btn.setAttribute('tabindex', '0');
+        } else {
+          btn.classList.remove('active');
+          btn.setAttribute('aria-selected', 'false');
+          btn.setAttribute('tabindex', '-1');
+        }
+      });
+    }
+    function updateStatus() {
+      if (selectedFileId === null) {
+        statusText.textContent = 'Belum ada file yang dipilih';
+      }
+    }
+
+    // Render file list with star icons and click handlers
+    function renderFileList() {
+      let filteredFiles = simulatedFiles.filter(f => {
+        // Adjust folder matching for Drive D: and Cloud Storage to handle possible folder path variations
+        if (currentFolder === 'Drive D:') {
+          return f.folder.startsWith('D:') || f.folder.startsWith('Drive D:');
+        } else if (currentFolder === 'Cloud Storage') {
+          return f.folder.startsWith('Cloud Storage') || f.folder.startsWith('CloudStorage');
+        } else {
+          return f.folder.startsWith(currentFolder);
+        }
+      });
+
+      if (currentTab === 'Favorit') {
+        filteredFiles = filteredFiles.filter(f => isFavorite(f.id));
+      }
+
+      if (currentTab === 'Terbaru') {
+        filteredFiles.sort((a,b) => {
+          const parseDate = (str) => {
+            const months = {
+              'Januari':0, 'Februari':1, 'Maret':2, 'April':3, 'Mei':4, 'Juni':5,
+              'Juli':6, 'Agustus':7, 'September':8, 'Oktober':9, 'November':10, 'Desember':11
+            };
+            const parts = str.split(' ');
+            if(parts.length !== 3) return new Date(0);
+            const day = parseInt(parts[0],10);
+            const month = months[parts[1]] ?? 0;
+            const year = parseInt(parts[2],10);
+            return new Date(year, month, day);
+          };
+          return parseDate(b.lastModified) - parseDate(a.lastModified);
+        });
+      }
+
+      fileListContainer.innerHTML = '';
+      if (filteredFiles.length === 0) {
+        const noFilesEl = document.createElement('li');
+        noFilesEl.textContent = 'Tidak ada file.';
+        noFilesEl.className = 'text-gray-500 p-4 text-center select-none';
+        fileListContainer.appendChild(noFilesEl);
+        return;
+      }
+
+      filteredFiles.forEach(file => {
+        const li = document.createElement('li');
+        li.className = 'file-list-item';
+        li.setAttribute('tabindex', '0');
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', 'false');
+        li.dataset.fileId = file.id;
+
+        // Star icon
+        const star = document.createElement('span');
+        star.className = 'star-icon';
+        star.textContent = isFavorite(file.id) ? '★' : '☆';
+        star.title = isFavorite(file.id) ? 'Hapus dari favorit' : 'Tambahkan ke favorit';
+        star.setAttribute('role', 'button');
+        star.setAttribute('tabindex', '0');
+        star.setAttribute('aria-label', star.title);
+        star.style.userSelect = 'none';
+        star.style.color = isFavorite(file.id) ? '#fbbf24' : '#d1d5db';
+        star.style.fontWeight = '700';
+        star.style.fontSize = '1.25rem';
+        star.style.cursor = 'pointer';
+        star.style.width = '20px';
+        star.style.textAlign = 'center';
+        star.style.lineHeight = '1';
+
+        li.appendChild(star);
+
+        // File icon
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-file-alt file-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        li.appendChild(icon);
+
+        // File name
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'file-name';
+        nameSpan.textContent = file.name;
+        li.appendChild(nameSpan);
+
+        // Folder location
+        const locSpan = document.createElement('span');
+        locSpan.className = 'file-location';
+        locSpan.textContent = file.folder;
+        li.appendChild(locSpan);
+
+        // Last modified date
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'file-date';
+        dateSpan.textContent = file.lastModified;
+        li.appendChild(dateSpan);
+
+        // Click star toggles favorite
+        star.addEventListener('click', e => {
+          e.stopPropagation();
+          if (isFavorite(file.id)) {
+            removeFavorite(file.id);
+            star.textContent = '☆';
+            star.title = 'Tambahkan ke favorit';
+            star.setAttribute('aria-label', star.title);
+            star.style.color = '#d1d5db';
+          } else {
+            addFavorite(file.id);
+            star.textContent = '★';
+            star.title = 'Hapus dari favorit';
+            star.setAttribute('aria-label', star.title);
+            star.style.color = '#fbbf24';
+          }
+          if (currentTab === 'Favorit' && !isFavorite(file.id)) {
+            if (selectedFileId === file.id) {
+              selectedFileId = null;
+              updateStatus();
+              openFileOpenBtn.disabled = true;
+            }
+            renderFileList();
+          }
+        });
+        star.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            star.click();
+          }
+        });
+
+        // Click list item selects file (except star)
+        li.addEventListener('click', e => {
+          if (e.target === star) return;
+          selectFile(file.id);
+        });
+        li.addEventListener('keydown', e => {
+          if (e.target === star) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectFile(file.id);
+          }
+        });
+
+        fileListContainer.appendChild(li);
+      });
+    }
+
+    // Select file
+    function selectFile(fileId) {
+      if (selectedFileId === fileId) return;
+      selectedFileId = fileId;
+      const items = fileListContainer.querySelectorAll('.file-list-item');
+      items.forEach(item => {
+        if (item.dataset.fileId === fileId) {
+          item.classList.add('selected');
+          item.setAttribute('aria-selected', 'true');
+          item.focus();
+        } else {
+          item.classList.remove('selected');
+          item.setAttribute('aria-selected', 'false');
+        }
+      });
+      const file = simulatedFiles.find(f => f.id === fileId);
+      if (file) {
+        statusText.textContent = `File terpilih: ${file.name}`;
+        openFileOpenBtn.disabled = false;
+      } else {
+        statusText.textContent = 'Belum ada file yang dipilih';
+        openFileOpenBtn.disabled = true;
+      }
+    }
+
+    // Create new tab and set active
+    function createNewFileTab(fileName, content) {
+      const id = `tab-${++tabIdCounter}`;
+      const allTabs = tabsContainer.querySelectorAll('.tab');
+      allTabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
+      });
+      const tab = document.createElement('div');
+      tab.className = 'tab active';
+      tab.setAttribute('data-id', id);
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('tabindex', '0');
+      tab.setAttribute('aria-selected', 'true');
+      tab.title = fileName;
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = fileName;
+      nameSpan.className = 'file-name';
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'close-btn';
+      closeBtn.setAttribute('aria-label', `Close ${fileName}`);
+      tab.appendChild(nameSpan);
+      tab.appendChild(closeBtn);
+      tabsContainer.appendChild(tab);
+      tabs.push({ id, fileName, content, styles: {} });
+      textEditor.value = content;
+      resetUndoRedoStacks(content);
+      // Reset styles to defaults on new tab
+      textEditor.style.fontFamily = fontFamilySelect.value;
+      textEditor.style.fontSize = fontSizeSelect.value;
+      // Set font color based on theme to ensure visibility
+      if (document.documentElement.classList.contains('dark')) {
+        textEditor.style.color = '#d1d5db'; // light gray for dark mode
+        fontColorInput.value = '#d1d5db';
+      } else {
+        textEditor.style.color = fontColorInput.value;
+      }
+      textEditor.style.fontWeight = 'normal';
+      textEditor.style.fontStyle = 'normal';
+      textEditor.style.textDecoration = 'none';
+      textEditor.style.listStyleType = 'none';
+      textEditor.style.textAlign = 'left';
+      textEditor.style.whiteSpace = 'pre-wrap';
+      textEditor.focus();
+      tab.addEventListener('click', e => {
+        if (e.target === closeBtn) return;
+        activateTab(id);
+      });
+      tab.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activateTab(id);
+        }
+      });
+      closeBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        closeTab(id);
+      });
+      activateTab(id);
+      saveBtn.disabled = false;
+    }
+    function activateTab(id) {
+      const allTabs = tabsContainer.querySelectorAll('.tab');
+      allTabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
+      });
+      const tab = tabsContainer.querySelector(`.tab[data-id="${id}"]`);
+      if (!tab) return;
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      tab.setAttribute('tabindex', '0');
+      tab.focus();
+      const tabData = tabs.find(t => t.id === id);
+      if (!tabData) return;
+      textEditor.value = tabData.content;
+      resetUndoRedoStacks(tabData.content);
+      // Apply saved styles if any
+      if (tabData.styles) {
+        textEditor.style.fontFamily = tabData.styles.fontFamily || fontFamilySelect.value;
+        textEditor.style.fontSize = tabData.styles.fontSize || fontSizeSelect.value;
+        // For color, if saved color exists, use it; else set based on theme
+        if (tabData.styles.color) {
+          textEditor.style.color = tabData.styles.color;
+          fontColorInput.value = rgbToHex(tabData.styles.color);
+        } else {
+          if (document.documentElement.classList.contains('dark')) {
+            textEditor.style.color = '#d1d5db';
+            fontColorInput.value = '#d1d5db';
+          } else {
+            textEditor.style.color = fontColorInput.value;
+          }
+        }
+        textEditor.style.fontWeight = tabData.styles.fontWeight || 'normal';
+        textEditor.style.fontStyle = tabData.styles.fontStyle || 'normal';
+        textEditor.style.textDecoration = tabData.styles.textDecoration || 'none';
+        textEditor.style.listStyleType = tabData.styles.listStyleType || 'none';
+        textEditor.style.textAlign = tabData.styles.textAlign || 'left';
+      } else {
+        textEditor.style.fontFamily = fontFamilySelect.value;
+        textEditor.style.fontSize = fontSizeSelect.value;
+        if (document.documentElement.classList.contains('dark')) {
+          textEditor.style.color = '#d1d5db';
+          fontColorInput.value = '#d1d5db';
+        } else {
+          textEditor.style.color = fontColorInput.value;
+        }
+        textEditor.style.fontWeight = 'normal';
+        textEditor.style.fontStyle = 'normal';
+        textEditor.style.textDecoration = 'none';
+        textEditor.style.listStyleType = 'none';
+        textEditor.style.textAlign = 'left';
+      }
+      updateFormatButtons();
+      textEditor.focus();
+      saveBtn.disabled = false;
+    }
+    function closeTab(id) {
+      const tab = tabsContainer.querySelector(`.tab[data-id="${id}"]`);
+      if (tab) tab.remove();
+      const index = tabs.findIndex(t => t.id === id);
+      if (index === -1) return;
+      tabs.splice(index, 1);
+      if (tabs.length === 0) {
+        textEditor.value = '';
+        resetUndoRedoStacks('');
+        textEditor.style.fontFamily = fontFamilySelect.value;
+        textEditor.style.fontSize = fontSizeSelect.value;
+        if (document.documentElement.classList.contains('dark')) {
+          textEditor.style.color = '#d1d5db';
+          fontColorInput.value = '#d1d5db';
+        } else {
+          textEditor.style.color = fontColorInput.value;
+        }
+        textEditor.style.fontWeight = 'normal';
+        textEditor.style.fontStyle = 'normal';
+        textEditor.style.textDecoration = 'none';
+        textEditor.style.listStyleType = 'none';
+        textEditor.style.textAlign = 'left';
+        updateFormatButtons();
+        textEditor.focus();
+        saveBtn.disabled = true;
+        return;
+      }
+      const activeTab = tabsContainer.querySelector('.tab.active');
+      if (!activeTab) {
+        activateTab(tabs[tabs.length - 1].id);
+      }
+    }
+
+    // Reset undo/redo stacks and push initial content
+    function resetUndoRedoStacks(initialContent) {
+      undoStack = [];
+      redoStack = [];
+      undoStack.push(initialContent);
+      updateUndoRedoButtons();
+    }
+
+    // Update Undo/Redo buttons disabled state
+    function updateUndoRedoButtons() {
+      undoBtn.disabled = undoStack.length <= 1;
+      redoBtn.disabled = redoStack.length === 0;
+      undoBtn.style.opacity = undoBtn.disabled ? '0.5' : '1';
+      redoBtn.style.opacity = redoBtn.disabled ? '0.5' : '1';
+      undoBtn.style.cursor = undoBtn.disabled ? 'default' : 'pointer';
+      redoBtn.style.cursor = redoBtn.disabled ? 'default' : 'pointer';
+    }
+
+    // Helper to convert rgb() to hex for color input sync
+    function rgbToHex(rgb) {
+      if (!rgb) return '#000000';
+      const result = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(rgb);
+      if (!result) return rgb; // already hex or invalid
+      return "#" + [1,2,3].map(i => {
+        const hex = parseInt(result[i]).toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      }).join('');
+    }
+
+    // Event listeners for modal open/close and UI
+    fileBtn.addEventListener('click', () => {
+      // Show file toolbar, hide edit toolbar
+      if (toolbar.classList.contains('hidden')) {
+        toolbar.classList.remove('hidden');
+      } else {
+        toolbar.classList.add('hidden');
+      }
+      if (!editToolbar.classList.contains('visible')) return;
+      editToolbar.classList.remove('visible');
+    });
+
+    editBtn.addEventListener('click', () => {
+      // Show edit toolbar, hide file toolbar
+      if (!editToolbar.classList.contains('visible')) {
+        editToolbar.classList.add('visible');
+      } else {
+        editToolbar.classList.remove('visible');
+      }
+      if (!toolbar.classList.contains('hidden')) {
+        toolbar.classList.add('hidden');
+      }
+    });
+
+    // Help button click: open help modal
+    helpBtn.addEventListener('click', () => {
+      helpModal.classList.add('active');
+      helpModal.querySelector('.modal-content').focus();
+    });
+
+    // Close help modal
+    closeHelpModalBtn.addEventListener('click', () => {
+      helpModal.classList.remove('active');
+      helpBtn.focus();
+    });
+
+    // Close help modal on Escape key
+    helpModal.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        helpModal.classList.remove('active');
+        helpBtn.focus();
+      }
+      if (e.key === 'Tab') {
+        const focusableElements = helpModal.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+        const focusable = Array.prototype.filter.call(focusableElements, el => !el.disabled && el.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    });
+
+    // Hide toolbars when clicking outside menu buttons and toolbars
+    document.addEventListener('click', e => {
+      if (
+        !fileBtn.contains(e.target) &&
+        !toolbar.contains(e.target) &&
+        !modal.contains(e.target) &&
+        !openFileModal.contains(e.target) &&
+        !saveFileModal.contains(e.target) &&
+        !searchPanel.contains(e.target) &&
+        !editBtn.contains(e.target) &&
+        !editToolbar.contains(e.target) &&
+        e.target !== searchBtn &&
+        !helpBtn.contains(e.target) &&
+        !helpModal.contains(e.target) &&
+        !errorModal.contains(e.target)
+      ) {
+        searchPanel.classList.add('hidden');
+        toolbar.classList.add('hidden');
+        editToolbar.classList.remove('visible');
+        helpModal.classList.remove('active');
+        errorModal.classList.remove('active');
+      }
+    });
+
+    newFileBtn.addEventListener('click', () => {
+      modal.classList.remove('hidden');
+      fileNameInput.value = '';
+      templateSelect.selectedIndex = 0;
+      textEditor.value = '';
+      resetUndoRedoStacks('');
+      fileNameInput.focus();
+    });
+    cancelBtn.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+    templateSelect.addEventListener('change', () => {
+      const selectedValue = templateSelect.value;
+      const content = templatesContent[selectedValue] ?? '';
+      textEditor.value = content;
+      resetUndoRedoStacks(content);
+      // Set font color based on theme to ensure visibility
+      if (document.documentElement.classList.contains('dark')) {
+        textEditor.style.color = '#d1d5db';
+        fontColorInput.value = '#d1d5db';
+      } else {
+        textEditor.style.color = fontColorInput.value;
+      }
+    });
+    newFileForm.addEventListener('submit', e => {
+      e.preventDefault();
+      let fileName = fileNameInput.value.trim();
+      if (!fileName) {
+        showError("Nama file tidak boleh kosong.");
+        return;
+      }
+      const template = templateSelect.value;
+      const content = templatesContent[template] ?? '';
+      createNewFileTab(fileName, content);
+      modal.classList.add('hidden');
+    });
+
+    // Open File modal logic
+    openFileBtn.addEventListener('click', () => {
+      openFileModal.classList.add('active');
+      selectedFileId = null;
+      updateStatus();
+      openFileOpenBtn.disabled = true;
+      setActiveFolder('Dokumen');
+      setActiveTab('Terbaru');
+      renderFileList();
+      openFileModal.querySelector('.modal-content').focus();
+    });
+    openFileCancelBtn.addEventListener('click', () => {
+      openFileModal.classList.remove('active');
+      selectedFileId = null;
+    });
+    sidebarButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('active')) return;
+        setActiveFolder(btn.dataset.folder);
+        renderFileList();
+        selectedFileId = null;
+        updateStatus();
+        openFileOpenBtn.disabled = true;
+      });
+    });
+    fileListTabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('active')) return;
+        setActiveTab(btn.dataset.tab);
+        renderFileList();
+        selectedFileId = null;
+        updateStatus();
+        openFileOpenBtn.disabled = true;
+      });
+    });
+    openFileOpenBtn.addEventListener('click', () => {
+      if (!selectedFileId) {
+        showError("Silakan pilih file terlebih dahulu sebelum membuka.");
+        return;
+      }
+      const file = simulatedFiles.find(f => f.id === selectedFileId);
+      if (!file) {
+        showError("File tidak ditemukan.");
+        return;
+      }
+      try {
+        createNewFileTab(file.name, file.content);
+      } catch (err) {
+        showError("Gagal membuka file. Akses ditolak atau file rusak.");
+        return;
+      }
+      openFileModal.classList.remove('active');
+      selectedFileId = null;
+      openFileOpenBtn.disabled = true;
+      statusText.textContent = 'Belum ada file yang dipilih';
+    });
+    openFileModal.addEventListener('keydown', e => {
+      if (e.key === 'Tab') {
+        const focusableElements = openFileModal.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+        const focusable = Array.prototype.filter.call(focusableElements, el => !el.disabled && el.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+      if (e.key === 'Escape') {
+        openFileModal.classList.remove('active');
+        selectedFileId = null;
+        openFileOpenBtn.disabled = true;
+        statusText.textContent = 'Belum ada file yang dipilih';
+      }
+    });
+
+    // Save modal logic
+    function openSaveModal() {
+      saveFileModal.classList.add('active');
+      const activeTab = tabsContainer.querySelector('.tab.active');
+      if (activeTab) {
+        let name = activeTab.querySelector('.file-name')?.textContent || '';
+        if (!name.toLowerCase().endsWith('.txt')) {
+          name += '.txt';
+        }
+        saveFileNameInput.value = name;
+      } else {
+        saveFileNameInput.value = 'untitled.txt';
+      }
+      saveFolderPathInput.value = '/Dokumen/Laporan/2025/';
+      storageOptions.forEach(opt => {
+        if (opt.dataset.storage === 'Dokumen') {
+          opt.classList.add('selected');
+          opt.setAttribute('aria-selected', 'true');
+          opt.focus();
+        } else {
+          opt.classList.remove('selected');
+          opt.setAttribute('aria-selected', 'false');
+        }
+      });
+      saveFileForm.autoSave.checked = false;
+      saveFileForm.readOnly.checked = false;
+      saveFileModal.querySelector('.modal-content').focus();
+    }
+    function closeSaveModal() {
+      saveFileModal.classList.remove('active');
+    }
+
+    saveBtn.addEventListener('click', () => {
+      if (tabs.length === 0) {
+        showError("Tidak ada dokumen yang terbuka untuk disimpan.");
+        return;
+      }
+      openSaveModal();
+    });
+    closeSaveModalBtn.addEventListener('click', () => {
+      closeSaveModal();
+    });
+    cancelSaveBtn.addEventListener('click', () => {
+      closeSaveModal();
+    });
+
+    storageOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        storageOptions.forEach(opt => {
+          opt.classList.remove('selected');
+          opt.setAttribute('aria-selected', 'false');
+        });
+        option.classList.add('selected');
+        option.setAttribute('aria-selected', 'true');
+        option.focus();
+        updateFolderTujuan(option.dataset.storage);
+      });
+      option.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          option.click();
+        }
+      });
+    });
+
+    function updateFolderTujuan(storageName) {
+      let folderValue = '';
+      switch(storageName) {
+        case 'Dokumen':
+          folderValue = 'Dokumen/Notepad_RPL';
+          break;
+        case 'Desktop':
+          folderValue = 'Desktop/Notepad_RPL';
+          break;
+        case 'Drive D:':
+          folderValue = 'Drive D:/Notepad_RPL';
+          break;
+        case 'Cloud Storage':
+          folderValue = 'Cloud Storage/Notepad_RPL';
+          break;
+        default:
+          folderValue = '';
+      }
+      saveFolderPathInput.value = folderValue;
+    }
+
+    saveFileForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const fileName = saveFileNameInput.value.trim();
+      if (!fileName) {
+        showError('Nama file tidak boleh kosong.');
+        saveFileNameInput.focus();
+        return;
+      }
+      if (!fileName.toLowerCase().endsWith('.txt')) {
+        showError('Nama file harus berakhiran .txt');
+        saveFileNameInput.focus();
+        return;
+      }
+      // Check if file with same name exists in simulatedFiles
+      const fileExistsInSimulated = simulatedFiles.find(f => f.name.toLowerCase() === fileName.toLowerCase());
+      if (fileExistsInSimulated) {
+        showError('File sudah ada dengan nama yang sama.');
+        return;
+      }
+      
+      const storageSelected = Array.from(storageOptions).find(opt => opt.classList.contains('selected'));
+      const storageName = storageSelected ? storageSelected.dataset.storage : 'Dokumen';
+      const folderPath = saveFolderPathInput.value.trim() || 'Dokumen/Notepad_RPL';
+      const autoSave = saveFileForm.autoSave.checked;
+      const readOnly = saveFileForm.readOnly.checked;
+
+      // Simulate save failure randomly (for demo)
+      if (Math.random() < 0.05) {
+        showError('Gagal menyimpan file karena kesalahan sistem.');
+        return;
+      }
+
+      // Get content from active tab
+      const activeTab = tabsContainer.querySelector('.tab.active');
+      if (!activeTab) {
+        showError('Tidak ada dokumen aktif untuk disimpan.');
+        return;
+      }
+      const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+      if (!tabData) {
+        showError('Data dokumen tidak ditemukan.');
+        return;
+      }
+
+      // Create new file object and add to simulatedFiles
+      const newFileId = `file${Date.now()}`;
+      const newFile = {
+        id: newFileId,
+        name: fileName,
+        folder: folderPath,
+        lastModified: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        content: tabData.content
+      };
+      simulatedFiles.push(newFile);
+
+      alert(`File "${fileName}" berhasil disimpan di lokasi "${storageName}" dengan folder "${folderPath}".\nAuto-save: ${autoSave ? 'Aktif' : 'Nonaktif'}\nRead-only: ${readOnly ? 'Ya' : 'Tidak'}`);
+
+      closeSaveModal();
+
+      // Update open file modal if open
+      if (openFileModal.classList.contains('active')) {
+        // If current folder in open file modal matches the storageName, refresh list to show new file
+        if (currentFolder === storageName) {
+          renderFileList();
+        }
+      }
+    });
+
+    saveFileModal.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeSaveModal();
+      }
+      if (e.key === 'Tab') {
+        const focusableElements = saveFileModal.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
+        const focusable = Array.prototype.filter.call(focusableElements, el => !el.disabled && el.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    });
+
+    textEditor.addEventListener('input', () => {
+      if (isUndoRedo) return;
+      // Limit text size to 1,000,000 characters for demo
+      if (textEditor.value.length > 1000000) {
+        showError('Teks terlalu besar untuk diproses.');
+        return;
+      }
+      undoStack.push(textEditor.value);
+      redoStack = [];
+      updateUndoRedoButtons();
+      // Update current tab content
+      const activeTab = tabsContainer.querySelector('.tab.active');
+      if (activeTab) {
+        const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+        if (tabData) {
+          tabData.content = textEditor.value;
+        }
+      }
+    });
+
+    undoBtn.addEventListener('click', () => {
+      if (undoStack.length <= 1) return;
+      isUndoRedo = true;
+      const current = undoStack.pop();
+      redoStack.push(current);
+      const previous = undoStack[undoStack.length - 1];
+      textEditor.value = previous;
+      // Update current tab content
+      const activeTab = tabsContainer.querySelector('.tab.active');
+      if (activeTab) {
+        const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+        if (tabData) {
+          tabData.content = previous;
+        }
+      }
+      setTimeout(() => {
+        textEditor.selectionStart = textEditor.selectionEnd = previous.length;
+        textEditor.focus();
+        isUndoRedo = false;
+      }, 0);
+      updateUndoRedoButtons();
+    });
+
+    redoBtn.addEventListener('click', () => {
+      if (redoStack.length === 0) return;
+      isUndoRedo = true;
+      const next = redoStack.pop();
+      undoStack.push(next);
+      textEditor.value = next;
+      // Update current tab content
+      const activeTab = tabsContainer.querySelector('.tab.active');
+      if (activeTab) {
+        const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+        if (tabData) {
+          tabData.content = next;
+        }
+      }
+      setTimeout(() => {
+        textEditor.selectionStart = textEditor.selectionEnd = next.length;
+        textEditor.focus();
+        isUndoRedo = false;
+      }, 0);
+      updateUndoRedoButtons();
+    });
+
+    searchBtn.addEventListener('click', () => {
+      if (searchPanel.classList.contains('hidden')) {
+        searchPanel.classList.remove('hidden');
+        searchInput.focus();
+      } else {
+        searchPanel.classList.add('hidden');
+      }
+    });
+
+    function doSearch() {
+      const searchTerm = searchInput.value;
+      if (!searchTerm) {
+        showError('Masukkan teks yang ingin dicari.');
+        return;
+      }
+      try {
+        // Test if searchTerm is a valid regex (optional)
+        new RegExp(searchTerm);
+      } catch {
+        showError('Regular expression tidak valid.');
+        return;
+      }
+
+      const text = textEditor.value;
+      let selectionStart = textEditor.selectionEnd || 0;
+      if (selectionStart === undefined || selectionStart === null) selectionStart = 0;
+
+      let index = text.indexOf(searchTerm, selectionStart);
+      if (index === -1 && selectionStart !== 0) {
+        index = text.indexOf(searchTerm, 0);
+      }
+      if (index !== -1) {
+        textEditor.focus();
+        textEditor.setSelectionRange(index, index + searchTerm.length);
+      } else {
+        showError('Teks tidak ditemukan.');
+      }
+    }
+
+    function doReplace() {
+      const searchTerm = searchInput.value;
+      const replaceTerm = replaceInput.value;
+      if (!searchTerm) {
+        showError('Masukkan teks untuk mencari.');
+        return;
+      }
+      try {
+        new RegExp(searchTerm);
+      } catch {
+        showError('Regular expression tidak valid.');
+        return;
+      }
+
+      const text = textEditor.value;
+      const selStart = textEditor.selectionStart;
+      const selEnd = textEditor.selectionEnd;
+      const selectedText = text.substring(selStart, selEnd);
+
+      if (selectedText === searchTerm) {
+        const before = text.substring(0, selStart);
+        const after = text.substring(selEnd);
+        const newText = before + replaceTerm + after;
+        textEditor.value = newText;
+        const cursorPos = selStart + replaceTerm.length;
+        textEditor.focus();
+        textEditor.setSelectionRange(cursorPos, cursorPos);
+        // Update current tab content
+        const activeTab = tabsContainer.querySelector('.tab.active');
+        if (activeTab) {
+          const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+          if (tabData) {
+            tabData.content = newText;
+          }
+        }
+      } else {
+        let index = text.indexOf(searchTerm, selEnd);
+        if (index === -1 && selEnd !== 0) {
+          index = text.indexOf(searchTerm, 0);
+        }
+        if (index !== -1) {
+          const before = text.substring(0, index);
+          const after = text.substring(index + searchTerm.length);
+          const newText = before + replaceTerm + after;
+          textEditor.value = newText;
+          textEditor.focus();
+          textEditor.setSelectionRange(index, index + replaceTerm.length);
+          // Update current tab content
+          const activeTab = tabsContainer.querySelector('.tab.active');
+          if (activeTab) {
+            const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+            if (tabData) {
+              tabData.content = newText;
+            }
+          }
+        } else {
+          showError('Teks tidak ditemukan untuk diganti.');
+        }
+      }
+    }
+
+    doSearchBtn.addEventListener('click', doSearch);
+    doReplaceBtn.addEventListener('click', doReplace);
+
+    searchOptionsBtn.addEventListener('click', () => {
+      alert('Fitur opsi pencarian belum tersedia.');
+    });
+
+    searchPanel.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        searchPanel.classList.add('hidden');
+        searchBtn.focus();
+      }
+    });
+
+    // THEME TOGGLE LOGIC
+    function setTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+        localStorage.setItem('moderntext_theme', 'dark');
+        // Update textarea font color if no custom color set
+        const activeTab = tabsContainer.querySelector('.tab.active');
+        if (activeTab) {
+          const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+          if (!tabData || !tabData.styles || !tabData.styles.color) {
+            textEditor.style.color = '#d1d5db';
+            fontColorInput.value = '#d1d5db';
+          }
+        } else {
+          textEditor.style.color = '#d1d5db';
+          fontColorInput.value = '#d1d5db';
+        }
+        // Update edit toolbar controls colors for dark mode
+        updateEditToolbarColors('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+        localStorage.setItem('moderntext_theme', 'light');
+        // Restore font color to selected or default
+        const activeTab = tabsContainer.querySelector('.tab.active');
+        if (activeTab) {
+          const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+          if (!tabData || !tabData.styles || !tabData.styles.color) {
+            textEditor.style.color = '#111827';
+            fontColorInput.value = '#111827';
+          }
+        } else {
+          textEditor.style.color = '#111827';
+          fontColorInput.value = '#111827';
+        }
+        // Update edit toolbar controls colors for light mode
+        updateEditToolbarColors('light');
+      }
+    }
+
+    function updateEditToolbarColors(theme) {
+      if (theme === 'dark') {
+        fontFamilySelect.style.color = '#d1d5db';
+        fontFamilySelect.style.backgroundColor = 'transparent';
+        fontFamilySelect.style.borderColor = '#4b5563';
+
+        fontSizeSelect.style.color = '#d1d5db';
+        fontSizeSelect.style.backgroundColor = 'transparent';
+        fontSizeSelect.style.borderColor = '#4b5563';
+
+        fontColorInput.style.backgroundColor = '#1f2937';
+
+        [boldBtn, italicBtn, underlineBtn, alignLeftBtn, alignCenterBtn, alignRightBtn, justifyBtn].forEach(btn => {
+          btn.style.color = '#d1d5db';
+          btn.style.borderColor = '#4b5563';
+          btn.style.backgroundColor = 'transparent';
+        });
+      } else {
+        fontFamilySelect.style.color = '#374151';
+        fontFamilySelect.style.backgroundColor = 'transparent';
+        fontFamilySelect.style.borderColor = '#d1d5db';
+
+        fontSizeSelect.style.color = '#374151';
+        fontSizeSelect.style.backgroundColor = 'transparent';
+        fontSizeSelect.style.borderColor = '#d1d5db';
+
+        fontColorInput.style.backgroundColor = 'white';
+
+        [boldBtn, italicBtn, underlineBtn, alignLeftBtn, alignCenterBtn, alignRightBtn, justifyBtn].forEach(btn => {
+          btn.style.color = '#374151';
+          btn.style.borderColor = '#d1d5db';
+          btn.style.backgroundColor = 'transparent';
+        });
+      }
+    }
+
+    function loadTheme() {
+      const savedTheme = localStorage.getItem('moderntext_theme');
+      if (savedTheme === 'dark') {
+        setTheme('dark');
+      } else if (savedTheme === 'light') {
+        setTheme('light');
+      } else {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          setTheme('dark');
+        } else {
+          setTheme('light');
+        }
+      }
+    }
+
+    toggleThemeBtn.addEventListener('click', () => {
+      if (document.documentElement.classList.contains('dark')) {
+        setTheme('light');
+      } else {
+        setTheme('dark');
+      }
+    });
+
+    loadTheme();
+
+    // FORMAT BUTTONS LOGIC
+
+    // Update format buttons active state based on textarea styles
+    function updateFormatButtons() {
+      const style = window.getComputedStyle(textEditor);
+      boldBtn.setAttribute('aria-pressed', style.fontWeight === '700' || style.fontWeight === 'bold' ? 'true' : 'false');
+      italicBtn.setAttribute('aria-pressed', style.fontStyle === 'italic' ? 'true' : 'false');
+      underlineBtn.setAttribute('aria-pressed', style.textDecorationLine.includes('underline') ? 'true' : 'false');
+      alignLeftBtn.classList.toggle('active', textEditor.style.textAlign === 'left' || textEditor.style.textAlign === '');
+      alignCenterBtn.classList.toggle('active', textEditor.style.textAlign === 'center');
+      alignRightBtn.classList.toggle('active', textEditor.style.textAlign === 'right');
+      justifyBtn.classList.toggle('active', textEditor.style.textAlign === 'justify');
+    }
+
+    // Apply style to textarea and save to current tab
+    function applyStyle(property, value) {
+      textEditor.style[property] = value;
+      const activeTab = tabsContainer.querySelector('.tab.active');
+      if (!activeTab) return;
+      const tabData = tabs.find(t => t.id === activeTab.dataset.id);
+      if (!tabData) return;
+      tabData.styles = tabData.styles || {};
+      tabData.styles[property] = value;
+    }
+
+    fontFamilySelect.addEventListener('change', () => {
+      applyStyle('fontFamily', fontFamilySelect.value);
+    });
+
+    fontSizeSelect.addEventListener('change', () => {
+      applyStyle('fontSize', fontSizeSelect.value);
+    });
+
+    fontColorInput.addEventListener('input', () => {
+      applyStyle('color', fontColorInput.value);
+    });
+
+    boldBtn.addEventListener('click', () => {
+      const isActive = boldBtn.getAttribute('aria-pressed') === 'true';
+      applyStyle('fontWeight', isActive ? 'normal' : 'bold');
+      updateFormatButtons();
+    });
+
+    italicBtn.addEventListener('click', () => {
+      const isActive = italicBtn.getAttribute('aria-pressed') === 'true';
+      applyStyle('fontStyle', isActive ? 'normal' : 'italic');
+      updateFormatButtons();
+    });
+
+    underlineBtn.addEventListener('click', () => {
+      const isActive = underlineBtn.getAttribute('aria-pressed') === 'true';
+      applyStyle('textDecoration', isActive ? 'none' : 'underline');
+      updateFormatButtons();
+    });
+
+    alignLeftBtn.addEventListener('click', () => {
+      applyStyle('textAlign', 'left');
+      updateFormatButtons();
+    });
+
+    alignCenterBtn.addEventListener('click', () => {
+      applyStyle('textAlign', 'center');
+      updateFormatButtons();
+    });
+
+    alignRightBtn.addEventListener('click', () => {
+      applyStyle('textAlign', 'right');
+      updateFormatButtons();
+    });
+
+    justifyBtn.addEventListener('click', () => {
+      applyStyle('textAlign', 'justify');
+      updateFormatButtons();
+    });
+
+    // Clipboard error handling for cut/copy/paste
+    document.addEventListener('copy', e => {
+      try {
+        // Allow default copy
+      } catch {
+        showError('Clipboard kosong atau tidak dapat diakses.');
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('cut', e => {
+      try {
+        // Allow default cut
+      } catch {
+        showError('Clipboard kosong atau tidak dapat diakses.');
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('paste', e => {
+      try {
+        // Allow default paste
+      } catch {
+        showError('Clipboard kosong atau tidak dapat diakses.');
+        e.preventDefault();
+      }
+    });
+
+    // Initialize format buttons on load
+    updateFormatButtons();
+
+    // Keyboard shortcuts for Undo, Redo, Bold, Italic, Underline, Find, Select All
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'z': // Undo
+            e.preventDefault();
+            undoBtn.click();
+            break;
+          case 'y': // Redo
+            e.preventDefault();
+            redoBtn.click();
+            break;
+          case 'b': // Bold
+            e.preventDefault();
+            boldBtn.click();
+            break;
+          case 'i': // Italic
+            e.preventDefault();
+            italicBtn.click();
+            break;
+          case 'u': // Underline
+            e.preventDefault();
+            underlineBtn.click();
+            break;
+          case 'f': // Find
+            e.preventDefault();
+            if (searchPanel.classList.contains('hidden')) {
+              searchPanel.classList.remove('hidden');
+              searchInput.focus();
+            } else {
+              searchPanel.classList.add('hidden');
+            }
+            break;
+          case 'a': // Select All
+            e.preventDefault();
+            textEditor.select();
+            break;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
